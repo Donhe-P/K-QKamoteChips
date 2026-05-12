@@ -1493,6 +1493,29 @@ textarea {
   white-space: nowrap;
 }
 
+.orders-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.orders-actions .secondary-btn {
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.sales-note {
+  background: #fff8df;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.94rem;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+}
+
 .table-wrap {
   max-height: 360px;
   overflow-x: auto;
@@ -1631,6 +1654,21 @@ td select {
   .admin-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .orders-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .orders-actions {
+    justify-content: stretch;
+  }
+
+  .orders-actions .secondary-btn,
+  .orders-actions strong {
+    text-align: center;
+    width: 100%;
   }
 
   .order-form,

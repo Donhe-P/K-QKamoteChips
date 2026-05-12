@@ -88,6 +88,11 @@ function loadOrders() {
   }
 }
 
+function saveOrders(orders) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+  return orders;
+}
+
 function makeOrderNumber() {
   const stamp = new Date().toISOString().slice(2, 10).replaceAll('-', '');
   return `KQ-${stamp}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -146,8 +151,19 @@ function App() {
   const [selectedFlavor, setSelectedFlavor] = useState(initialOrder.variant);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    saveOrders(orders);
   }, [orders]);
+
+  useEffect(() => {
+    const syncOrders = (event) => {
+      if (event.key === STORAGE_KEY) {
+        setOrders(loadOrders());
+      }
+    };
+
+    window.addEventListener('storage', syncOrders);
+    return () => window.removeEventListener('storage', syncOrders);
+  }, []);
 
   const analytics = useMemo(() => {
     const activeOrders = orders.filter((order) => order.status !== 'Cancelled');
@@ -252,7 +268,7 @@ function App() {
       orderNumber: makeOrderNumber(),
       createdAt: new Date().toISOString(),
     };
-    setOrders((current) => [order, ...current]);
+    setOrders((current) => saveOrders([order, ...current]));
     setConfirmation(order);
     setOrderForm(initialOrder);
   };
@@ -270,12 +286,16 @@ function App() {
 
   const updateStatus = (orderNumber, status) => {
     setOrders((current) =>
-      current.map((order) => (order.orderNumber === orderNumber ? { ...order, status } : order))
+      saveOrders(current.map((order) => (order.orderNumber === orderNumber ? { ...order, status } : order)))
     );
   };
 
   const deleteOrder = (orderNumber) => {
-    setOrders((current) => current.filter((order) => order.orderNumber !== orderNumber));
+    setOrders((current) => saveOrders(current.filter((order) => order.orderNumber !== orderNumber)));
+  };
+
+  const refreshOrders = () => {
+    setOrders(loadOrders());
   };
 
   return (
@@ -368,6 +388,7 @@ function App() {
             orders={orders}
             password={password}
             passwordError={passwordError}
+            refreshOrders={refreshOrders}
             setPassword={setPassword}
             updateStatus={updateStatus}
           />
@@ -778,6 +799,7 @@ function AdminPage({
   orders,
   password,
   passwordError,
+  refreshOrders,
   setPassword,
   updateStatus,
 }) {
@@ -832,8 +854,17 @@ function AdminPage({
             <h2>Customer Orders / Sales</h2>
             <p>All submitted customer orders appear here first.</p>
           </div>
-          <strong>{orders.length} total</strong>
+          <div className="orders-actions">
+            <button className="secondary-btn" type="button" onClick={refreshOrders}>
+              Refresh Sales
+            </button>
+            <strong>{orders.length} total</strong>
+          </div>
         </div>
+        <p className="sales-note">
+          Orders are saved in this browser. If customers order from another phone or device, connect a
+          shared database or Google Sheet so the admin dashboard can receive them online.
+        </p>
         <div className="table-wrap">
           <table>
             <thead>
