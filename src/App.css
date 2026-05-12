@@ -1463,8 +1463,40 @@ textarea {
   padding: 20px;
 }
 
+.sales-panel {
+  border-color: rgba(217, 155, 43, 0.42);
+  box-shadow: 0 16px 42px rgba(80, 43, 18, 0.1);
+}
+
+.orders-heading {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.orders-heading h2 {
+  margin-bottom: 4px;
+}
+
+.orders-heading p {
+  margin-bottom: 0;
+}
+
+.orders-heading strong {
+  background: var(--cream-strong);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--brown);
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
 .table-wrap {
+  max-height: 360px;
   overflow-x: auto;
+  overflow-y: auto;
 }
 
 table {
@@ -1482,9 +1514,13 @@ td {
 }
 
 th {
+  background: var(--white);
   color: var(--brown);
   font-size: 0.82rem;
+  position: sticky;
+  top: 0;
   text-transform: uppercase;
+  z-index: 1;
 }
 
 td span {

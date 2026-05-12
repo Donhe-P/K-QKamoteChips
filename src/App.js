@@ -826,6 +826,69 @@ function AdminPage({
         <Stat label="Average Order" value={money(analytics.averageOrder)} />
       </div>
 
+      <div className="orders-panel sales-panel">
+        <div className="orders-heading">
+          <div>
+            <h2>Customer Orders / Sales</h2>
+            <p>All submitted customer orders appear here first.</p>
+          </div>
+          <strong>{orders.length} total</strong>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Payment</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length ? (
+                orders.map((order) => (
+                  <tr key={order.orderNumber}>
+                    <td>{order.orderNumber}</td>
+                    <td>{new Date(order.createdAt).toLocaleString('en-PH')}</td>
+                    <td>
+                      <strong>{order.name}</strong>
+                      <span>{order.contact}</span>
+                    </td>
+                    <td>
+                      {order.quantity} x {order.variant}
+                    </td>
+                    <td>{money(order.total)}</td>
+                    <td>{order.payment}</td>
+                    <td>{order.address}</td>
+                    <td>
+                      <select value={order.status} onChange={(event) => updateStatus(order.orderNumber, event.target.value)}>
+                        {statusOptions.map((status) => (
+                          <option key={status}>{status}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <button className="danger-btn" type="button" onClick={() => deleteOrder(order.orderNumber)}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="9">No customer orders yet. New checkout submissions will show here.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div className="charts-grid">
         <ChartPanel title="Best-Selling Flavors">
           <ResponsiveContainer width="100%" height={230}>
@@ -879,63 +942,6 @@ function AdminPage({
             )}
           </ol>
         </ChartPanel>
-      </div>
-
-      <div className="orders-panel">
-        <h2>Orders</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Items</th>
-                <th>Total</th>
-                <th>Payment</th>
-                <th>Address</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length ? (
-                orders.map((order) => (
-                  <tr key={order.orderNumber}>
-                    <td>{order.orderNumber}</td>
-                    <td>{new Date(order.createdAt).toLocaleString('en-PH')}</td>
-                    <td>
-                      <strong>{order.name}</strong>
-                      <span>{order.contact}</span>
-                    </td>
-                    <td>
-                      {order.quantity} x {order.variant}
-                    </td>
-                    <td>{money(order.total)}</td>
-                    <td>{order.payment}</td>
-                    <td>{order.address}</td>
-                    <td>
-                      <select value={order.status} onChange={(event) => updateStatus(order.orderNumber, event.target.value)}>
-                        {statusOptions.map((status) => (
-                          <option key={status}>{status}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <button className="danger-btn" type="button" onClick={() => deleteOrder(order.orderNumber)}>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="9">No orders yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
     </section>
   );
