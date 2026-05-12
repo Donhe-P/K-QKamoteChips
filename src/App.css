@@ -1010,6 +1010,7 @@ p {
 .admin-login,
 .chart-panel,
 .orders-panel,
+.sync-panel,
 .stat-card {
   background: var(--white);
   border: 1px solid var(--line);
@@ -1417,6 +1418,36 @@ textarea {
   font-size: clamp(1.3rem, 3vw, 2rem);
 }
 
+.sync-panel {
+  box-shadow: 0 16px 42px rgba(80, 43, 18, 0.08);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 0.65fr) minmax(260px, 1fr);
+  margin-top: 18px;
+  padding: 20px;
+}
+
+.sync-panel h2 {
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.sync-panel p {
+  margin-bottom: 0;
+}
+
+.sync-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  grid-column: 2;
+}
+
+.sync-actions span {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
 .charts-grid {
   display: grid;
   gap: 18px;
@@ -1593,10 +1624,15 @@ td select {
   }
 
   .stat-grid,
+  .sync-panel,
   .charts-grid,
   .flavor-grid,
   .home-flavor-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sync-actions {
+    grid-column: 1 / -1;
   }
 
   .home-process {
@@ -1673,12 +1709,18 @@ td select {
 
   .order-form,
   .stat-grid,
+  .sync-panel,
   .charts-grid,
   .flavor-grid,
   .home-flavor-row,
   .hero-stats,
   .summary-list {
     grid-template-columns: 1fr;
+  }
+
+  .sync-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .product-title {

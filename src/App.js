@@ -16,6 +16,8 @@ import {
 import './App.css';
 
 const STORAGE_KEY = 'kq-kamote-orders';
+const ORDER_API_URL_KEY = 'kq-kamote-order-api-url';
+const DEFAULT_ORDER_API_URL = process.env.REACT_APP_ORDER_API_URL || '';
 const ADMIN_PASSWORD = 'admin2026';
 
 const product = {
@@ -93,6 +95,35 @@ function saveOrders(orders) {
   return orders;
 }
 
+function loadOrderApiUrl() {
+  return localStorage.getItem(ORDER_API_URL_KEY) || DEFAULT_ORDER_API_URL;
+}
+
+function saveOrderApiUrl(url) {
+  localStorage.setItem(ORDER_API_URL_KEY, url.trim());
+}
+
+async function requestOrderApi(apiUrl, payload) {
+  if (!apiUrl.trim()) {
+    return null;
+  }
+
+  const response = await fetch(apiUrl.trim(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Order sync failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data.orders) ? data.orders : null;
+}
+
 function makeOrderNumber() {
   const stamp = new Date().toISOString().slice(2, 10).replaceAll('-', '');
   return `KQ-${stamp}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -149,10 +180,18 @@ function App() {
   const [passwordError, setPasswordError] = useState('');
   const [logoMoodIndex, setLogoMoodIndex] = useState(0);
   const [selectedFlavor, setSelectedFlavor] = useState(initialOrder.variant);
+  const [orderApiUrl, setOrderApiUrl] = useState(loadOrderApiUrl);
+  const [syncStatus, setSyncStatus] = useState(
+    loadOrderApiUrl() ? 'Remote order sync is ready.' : 'Local browser storage only.'
+  );
 
   useEffect(() => {
     saveOrders(orders);
   }, [orders]);
+
+  useEffect(() => {
+    saveOrderApiUrl(orderApiUrl);
+  }, [orderApiUrl]);
 
   useEffect(() => {
     const syncOrders = (event) => {
@@ -257,7 +296,7 @@ function App() {
     }));
   };
 
-  const submitOrder = (event) => {
+  const submitOrder = async (event) => {
     event.preventDefault();
     const total = product.price * Number(orderForm.quantity);
     const order = {
@@ -269,6 +308,17 @@ function App() {
       createdAt: new Date().toISOString(),
     };
     setOrders((current) => saveOrders([order, ...current]));
+    if (orderApiUrl.trim()) {
+      try {
+        const remoteOrders = await requestOrderApi(orderApiUrl, { action: 'add', order });
+        if (remoteOrders) {
+          setOrders(saveOrders(remoteOrders));
+        }
+        setSyncStatus('Order synced to shared sales dashboard.');
+      } catch {
+        setSyncStatus('Order saved on this device, but remote sync failed.');
+      }
+    }
     setConfirmation(order);
     setOrderForm(initialOrder);
   };
@@ -284,18 +334,56 @@ function App() {
     setPasswordError('Incorrect password. Please try again.');
   };
 
-  const updateStatus = (orderNumber, status) => {
-    setOrders((current) =>
-      saveOrders(current.map((order) => (order.orderNumber === orderNumber ? { ...order, status } : order)))
-    );
+  const updateStatus = async (orderNumber, status) => {
+    const nextOrders = orders.map((order) => (order.orderNumber === orderNumber ? { ...order, status } : order));
+    setOrders(saveOrders(nextOrders));
+
+    if (orderApiUrl.trim()) {
+      try {
+        const remoteOrders = await requestOrderApi(orderApiUrl, { action: 'updateStatus', orderNumber, status });
+        if (remoteOrders) {
+          setOrders(saveOrders(remoteOrders));
+        }
+        setSyncStatus('Order status synced.');
+      } catch {
+        setSyncStatus('Status changed locally, but remote sync failed.');
+      }
+    }
   };
 
-  const deleteOrder = (orderNumber) => {
-    setOrders((current) => saveOrders(current.filter((order) => order.orderNumber !== orderNumber)));
+  const deleteOrder = async (orderNumber) => {
+    const nextOrders = orders.filter((order) => order.orderNumber !== orderNumber);
+    setOrders(saveOrders(nextOrders));
+
+    if (orderApiUrl.trim()) {
+      try {
+        const remoteOrders = await requestOrderApi(orderApiUrl, { action: 'delete', orderNumber });
+        if (remoteOrders) {
+          setOrders(saveOrders(remoteOrders));
+        }
+        setSyncStatus('Order removed from shared sales dashboard.');
+      } catch {
+        setSyncStatus('Order removed locally, but remote sync failed.');
+      }
+    }
   };
 
-  const refreshOrders = () => {
-    setOrders(loadOrders());
+  const refreshOrders = async () => {
+    if (!orderApiUrl.trim()) {
+      setOrders(loadOrders());
+      setSyncStatus('Showing orders saved in this browser only.');
+      return;
+    }
+
+    try {
+      setSyncStatus('Loading shared sales...');
+      const remoteOrders = await requestOrderApi(orderApiUrl, { action: 'list' });
+      setOrders(saveOrders(remoteOrders || []));
+      setSyncStatus('Shared sales loaded.');
+    } catch {
+      setOrders(loadOrders());
+      setSyncStatus('Could not load shared sales. Showing this browser only.');
+    }
   };
 
   return (
@@ -385,11 +473,14 @@ function App() {
             deleteOrder={deleteOrder}
             downloadCsv={() => downloadCsv(orders)}
             loginAdmin={loginAdmin}
+            orderApiUrl={orderApiUrl}
             orders={orders}
             password={password}
             passwordError={passwordError}
             refreshOrders={refreshOrders}
+            setOrderApiUrl={setOrderApiUrl}
             setPassword={setPassword}
+            syncStatus={syncStatus}
             updateStatus={updateStatus}
           />
         )}
@@ -796,11 +887,14 @@ function AdminPage({
   deleteOrder,
   downloadCsv,
   loginAdmin,
+  orderApiUrl,
   orders,
   password,
   passwordError,
   refreshOrders,
+  setOrderApiUrl,
   setPassword,
+  syncStatus,
   updateStatus,
 }) {
   if (!adminUnlocked) {
@@ -848,6 +942,27 @@ function AdminPage({
         <Stat label="Average Order" value={money(analytics.averageOrder)} />
       </div>
 
+      <div className="sync-panel">
+        <div>
+          <h2>Shared Order Sync</h2>
+          <p>Connect a shared order API so customer orders from other phones and devices appear here.</p>
+        </div>
+        <label>
+          Order API URL
+          <input
+            value={orderApiUrl}
+            onChange={(event) => setOrderApiUrl(event.target.value)}
+            placeholder="Paste your shared order API URL"
+          />
+        </label>
+        <div className="sync-actions">
+          <button className="secondary-btn" type="button" onClick={refreshOrders}>
+            Load Shared Sales
+          </button>
+          <span>{syncStatus}</span>
+        </div>
+      </div>
+
       <div className="orders-panel sales-panel">
         <div className="orders-heading">
           <div>
@@ -862,8 +977,8 @@ function AdminPage({
           </div>
         </div>
         <p className="sales-note">
-          Orders are saved in this browser. If customers order from another phone or device, connect a
-          shared database or Google Sheet so the admin dashboard can receive them online.
+          Without a connected Order API URL, the dashboard can only see orders saved in this browser.
+          Use shared sync to receive customer orders from other devices.
         </p>
         <div className="table-wrap">
           <table>
